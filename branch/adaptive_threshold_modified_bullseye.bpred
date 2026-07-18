@@ -1,0 +1,216 @@
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#include "ooo_cpu.h"
+
+#define NTABLES 16
+#define MAXHIST 232
+
+int history_lengths[NTABLES] = { 0, 3, 4, 6, 8, 10, 14, 19, 26, 36, 49, 67, 91, 125, 170, MAXHIST };
+
+#define LOG_TABLE_SIZE 12
+#define TABLE_SIZE (1 << LOG_TABLE_SIZE)
+#define NGHIST_WORDS (MAXHIST / LOG_TABLE_SIZE + 1)
+
+#define BS_SETS 256
+#define BS_WAYS 4
+#define HARD_SAMPLE_LIMIT 16
+#define HARD_MISPRED_LIMIT 4
+#define RESIDENT_TRIAL 32
+#define PROMOTE_MARGIN 3
+#define MIN_THETA 4
+#define MAX_THETA 64
+#define START_THETA 10
+
+int global_tables[NUM_CPUS][NTABLES][TABLE_SIZE];
+int local_tables[NUM_CPUS][NTABLES][TABLE_SIZE];
+
+unsigned int ghist_words[NUM_CPUS][NGHIST_WORDS];
+unsigned int lhist_words[NUM_CPUS][NGHIST_WORDS];
+
+unsigned int gindices[NUM_CPUS][NTABLES];
+unsigned int lindices[NUM_CPUS][NTABLES];
+
+int gyout[NUM_CPUS];
+int lyout[NUM_CPUS];
+
+struct BullseyeEntry {
+    uint64_t tag;
+    bool valid;
+    bool hard;
+    bool resident;
+    bool use_local;
+    uint16_t seen;
+    uint16_t mispred;
+    uint16_t g_right;
+    uint16_t l_right;
+    uint8_t age;
+    int theta;
+};
+
+BullseyeEntry bs_table[NUM_CPUS][BS_SETS][BS_WAYS];
+
+static inline int clamp_int(int v, int lo, int hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+static inline unsigned int calc_index(uint64_t pc, unsigned int *hist_words, int n) {
+    unsigned int x = 0;
+    int most_words = n / LOG_TABLE_SIZE;
+    int last_bits = n % LOG_TABLE_SIZE;
+
+    int j = 0;
+    for (; j < most_words; ++j) x ^= hist_words[j];
+    if (last_bits) x ^= hist_words[j] & ((1u << last_bits) - 1u);
+
+    x ^= (unsigned int)pc;
+    return x & (TABLE_SIZE - 1);
+}
+
+static inline void update_history(unsigned int *hist_words, bool taken) {
+    bool b = taken;
+    for (int i = 0; i < NGHIST_WORDS; ++i) {
+        hist_words[i] <<= 1;
+        hist_words[i] |= b;
+        b = !!(hist_words[i] & TABLE_SIZE);
+        hist_words[i] &= TABLE_SIZE - 1;
+    }
+}
+
+static inline BullseyeEntry &get_entry(int cpu, uint64_t pc) {
+    unsigned set = (pc >> 2) & (BS_SETS - 1);
+
+    for (int w = 0; w < BS_WAYS; ++w) {
+        BullseyeEntry &e = bs_table[cpu][set][w];
+        if (e.valid && e.tag == pc) {
+            for (int k = 0; k < BS_WAYS; ++k) {
+                if (bs_table[cpu][set][k].valid) bs_table[cpu][set][k].age++;
+            }
+            e.age = 0;
+            return e;
+        }
+    }
+
+    int victim = 0;
+    for (int w = 1; w < BS_WAYS; ++w) {
+        if (!bs_table[cpu][set][w].valid) {
+            victim = w;
+            break;
+        }
+        if (bs_table[cpu][set][w].age > bs_table[cpu][set][victim].age) victim = w;
+    }
+
+    BullseyeEntry &e = bs_table[cpu][set][victim];
+    e = {};
+    e.valid = true;
+    e.tag = pc;
+    e.age = 0;
+    e.theta = START_THETA;
+    return e;
+}
+
+void O3_CPU::initialize_branch_predictor () {
+    memset(global_tables, 0, sizeof(global_tables));
+    memset(local_tables, 0, sizeof(local_tables));
+    memset(ghist_words, 0, sizeof(ghist_words));
+    memset(lhist_words, 0, sizeof(lhist_words));
+    memset(gindices, 0, sizeof(gindices));
+    memset(lindices, 0, sizeof(lindices));
+    memset(bs_table, 0, sizeof(bs_table));
+}
+
+uint8_t O3_CPU::predict_branch(uint64_t pc) {
+    BullseyeEntry &e = get_entry(cpu, pc);
+
+    gyout[cpu] = 0;
+    lyout[cpu] = 0;
+
+    for (int i = 0; i < NTABLES; i++) {
+        int n = history_lengths[i];
+
+        gindices[cpu][i] = calc_index(pc, ghist_words[cpu], n);
+        gyout[cpu] += global_tables[cpu][i][gindices[cpu][i]];
+
+        lindices[cpu][i] = calc_index(pc, lhist_words[cpu], n);
+        lyout[cpu] += local_tables[cpu][i][lindices[cpu][i]];
+    }
+
+    bool gpred = (gyout[cpu] >= 1);
+    bool lpred = (lyout[cpu] >= 1);
+
+    if (!e.hard) return gpred;
+
+    if (!e.resident) {
+        if (e.seen < RESIDENT_TRIAL) return gpred;
+        return (e.l_right + PROMOTE_MARGIN > e.g_right) ? lpred : gpred;
+    }
+
+    return e.use_local ? lpred : gpred;
+}
+
+void O3_CPU::last_branch_result(uint64_t pc, uint8_t taken) {
+    BullseyeEntry &e = get_entry(cpu, pc);
+
+    bool gpred = (gyout[cpu] >= 1);
+    bool lpred = (lyout[cpu] >= 1);
+    bool gcorrect = (taken == gpred);
+    bool lcorrect = (taken == lpred);
+
+    e.seen++;
+    if (!gcorrect) e.mispred++;
+    if (gcorrect) e.g_right++;
+    if (lcorrect) e.l_right++;
+
+    if (!e.hard && e.seen >= HARD_SAMPLE_LIMIT && e.mispred >= HARD_MISPRED_LIMIT) {
+        e.hard = true;
+    }
+
+    if (e.hard && !e.resident && e.seen >= RESIDENT_TRIAL) {
+        e.use_local = (e.l_right > e.g_right);
+        e.resident = true;
+    }
+
+    update_history(ghist_words[cpu], taken);
+    update_history(lhist_words[cpu], taken);
+
+    bool chosen_local = e.hard && e.resident && e.use_local;
+    int chosen_sum = chosen_local ? lyout[cpu] : gyout[cpu];
+    bool chosen_correct = chosen_local ? lcorrect : gcorrect;
+
+    // Adaptive threshold rule:
+    // - weak or wrong chosen prediction -> raise theta
+    // - strong correct chosen prediction -> lower theta
+    if (!chosen_correct || abs(chosen_sum) < e.theta) {
+        e.theta = clamp_int(e.theta + 1, MIN_THETA, MAX_THETA);
+    } else if (abs(chosen_sum) > e.theta + 2) {
+        e.theta = clamp_int(e.theta - 1, MIN_THETA, MAX_THETA);
+    }
+
+    bool train_global = !e.hard || !e.resident || !e.use_local;
+    bool train_local = e.hard;
+
+    if (train_global && (!gcorrect || abs(gyout[cpu]) < e.theta)) {
+        for (int i = 0; i < NTABLES; i++) {
+            int *w = &global_tables[cpu][i][gindices[cpu][i]];
+            if (taken) {
+                if (*w < 127) (*w)++;
+            } else {
+                if (*w > -128) (*w)--;
+            }
+        }
+    }
+
+    if (train_local && (!lcorrect || abs(lyout[cpu]) < e.theta)) {
+        for (int i = 0; i < NTABLES; i++) {
+            int *w = &local_tables[cpu][i][lindices[cpu][i]];
+            if (taken) {
+                if (*w < 127) (*w)++;
+            } else {
+                if (*w > -128) (*w)--;
+            }
+        }
+    }
+}
