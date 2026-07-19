@@ -1,0 +1,7 @@
+predictor,ipc,accuracy,mpki,sim_time,pred_latency
+Hashed Perceptron,0.661,97.061,4.909,2.75,4.0
+Modified Bullseye,0.66,96.913,5.102,2.5,5.0
+Adaptive Bullseye,0.658,96.786,5.374,2.75,5.0
+Perceptron,0.654,96.818,5.354,2.25,3.0
+Gshare,0.648,96.51,5.845,3.0,1.0
+Bimodal,0.644,96.343,6.213,2.75,1.0
