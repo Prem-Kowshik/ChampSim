@@ -1,0 +1,30 @@
+
+*** ChampSim Multicore Out-of-Order Simulator ***
+
+Warmup Instructions: 1000000
+Simulation Instructions: 10000000
+Number of CPUs: 4
+LLC sets: 4096
+LLC ways: 16
+Off-chip DRAM Size: 4096 MB Channels: 1 Width: 64-bit Data Rate: 3200 MT/s
+
+CPU 0 runs /mnt/c/Users/dadir/Downloads/Lab-Final/ChampSim-master/dpc3_traces/619.lbm_s-3766B.champsimtrace.xz
+CPU 1 runs /mnt/c/Users/dadir/Downloads/Lab-Final/ChampSim-master/dpc3_traces/403.gcc-16B.champsimtrace.xz
+CPU 2 runs /mnt/c/Users/dadir/Downloads/Lab-Final/ChampSim-master/dpc3_traces/401.bzip2-277B.champsimtrace.xz
+CPU 3 runs /mnt/c/Users/dadir/Downloads/Lab-Final/ChampSim-master/dpc3_traces/620.omnetpp_s-874B.champsimtrace.xz
+CPU 0 Bimodal branch predictor
+CPU 1 Bimodal branch predictor
+CPU 2 Bimodal branch predictor
+CPU 3 Bimodal branch predictor
+Initialize SRRIP state
+
+Warmup complete CPU 0 instructions: 1732465 cycles: 560629 (Simulation time: 0 hr 0 min 16 sec) 
+Warmup complete CPU 1 instructions: 1241550 cycles: 560629 (Simulation time: 0 hr 0 min 16 sec) 
+Warmup complete CPU 2 instructions: 1977087 cycles: 560629 (Simulation time: 0 hr 0 min 16 sec) 
+Warmup complete CPU 3 instructions: 1000002 cycles: 560629 (Simulation time: 0 hr 0 min 16 sec) 
+
+Heartbeat CPU 1 instructions: 10000002 cycles: 8534437 heartbeat IPC: 1.17172 cumulative IPC: 1.0984 (Simulation time: 0 hr 1 min 23 sec) 
+Finished CPU 1 instructions: 10000000 cycles: 9003334 cumulative IPC: 1.1107 (Simulation time: 0 hr 1 min 31 sec) 
+Heartbeat CPU 0 instructions: 10000000 cycles: 13989680 heartbeat IPC: 0.714813 cumulative IPC: 0.615646 (Simulation time: 0 hr 2 min 5 sec) 
+Finished CPU 0 instructions: 10000002 cycles: 16345463 cumulative IPC: 0.611791 (Simulation time: 0 hr 2 min 27 sec) 
+Heartbeat CPU 1 instructions: 20000001 cycles: 17274085 heartbeat IPC: 1.14421 cumulative IPC: 1.12236 (Simulation time: 0 hr 2 min 30 sec) 
