@@ -1,0 +1,158 @@
+#include "cache.h"
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+
+#define HCIT_SETS 256
+#define HCIT_WAYS 4
+#define HCIT_COUNTER_MAX 3
+#define HCIT_HARD_THRESHOLD 2   
+
+struct HCITEntry {
+    uint64_t tag;
+    uint8_t counter;
+    bool valid;
+    uint8_t age;
+};
+
+static HCITEntry hcit[NUM_CPUS][HCIT_SETS][HCIT_WAYS];
+static uint64_t resident_key[NUM_CPUS][NUM_SET][NUM_WAY];
+static inline uint64_t block_key(uint64_t addr)
+{
+    return addr >> 6;
+}
+static inline uint32_t hcit_set_index(uint64_t key)
+{
+    return (uint32_t)((key ^ (key >> 8) ^ (key >> 16)) & (HCIT_SETS - 1));
+}
+static inline HCITEntry &hcit_lookup_or_alloc(int cpu, uint64_t key)
+{
+    uint32_t set = hcit_set_index(key);
+
+    // Hit
+    for (int way = 0; way < HCIT_WAYS; way++) {
+        if (hcit[cpu][set][way].valid && hcit[cpu][set][way].tag == key) {
+            // age management
+            for (int k = 0; k < HCIT_WAYS; k++) {
+                if (hcit[cpu][set][k].valid) hcit[cpu][set][k].age++;
+            }
+            hcit[cpu][set][way].age = 0;
+            return hcit[cpu][set][way];
+        }
+    }
+
+    // Miss in HCIT: choose invalid first, else oldest
+    int victim = 0;
+    for (int way = 0; way < HCIT_WAYS; way++) {
+        if (!hcit[cpu][set][way].valid) {
+            victim = way;
+            break;
+        }
+        if (hcit[cpu][set][way].age > hcit[cpu][set][victim].age) {
+            victim = way;
+        }
+    }
+
+    HCITEntry &e = hcit[cpu][set][victim];
+    e.valid = true;
+    e.tag = key;
+    e.counter = 0;
+    e.age = 0;
+
+    return e;
+}
+
+static inline bool is_hard(int cpu, uint64_t key)
+{
+    HCITEntry &e = hcit_lookup_or_alloc(cpu, key);
+    return e.counter >= HCIT_HARD_THRESHOLD;
+}
+
+static inline void bump_hcit(int cpu, uint64_t key, bool hit, bool eviction)
+{
+    if (key == 0) return;
+
+    HCITEntry &e = hcit_lookup_or_alloc(cpu, key);
+
+    if (hit) {
+        if (e.counter > 0) e.counter--;
+    } else {
+        if (e.counter < HCIT_COUNTER_MAX) e.counter++;
+    }
+
+    if (eviction) {
+        if (e.counter < HCIT_COUNTER_MAX) e.counter++;
+    }
+}
+
+void CACHE::llc_initialize_replacement()
+{
+    memset(hcit, 0, sizeof(hcit));
+    memset(resident_key, 0, sizeof(resident_key));
+}
+
+uint32_t CACHE::llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set,
+                                const BLOCK *current_set, uint64_t ip,
+                                uint64_t full_addr, uint32_t type)
+{
+    for (uint32_t way = 0; way < NUM_WAY; way++) {
+        if (!current_set[way].valid) {
+            return way;
+        }
+    }
+
+    int best_nonhard = -1;
+    uint32_t best_nonhard_lru = 0;
+
+    int best_any = 0;
+    uint32_t best_any_lru = current_set[0].lru;
+
+    for (uint32_t way = 0; way < NUM_WAY; way++) {
+        uint64_t key = resident_key[cpu][set][way];
+        bool hard = is_hard(cpu, key);
+
+        if (!hard) {
+            if (best_nonhard == -1 || current_set[way].lru > best_nonhard_lru) {
+                best_nonhard = way;
+                best_nonhard_lru = current_set[way].lru;
+            }
+        }
+
+        if (current_set[way].lru > best_any_lru) {
+            best_any = way;
+            best_any_lru = current_set[way].lru;
+        }
+    }
+
+    if (best_nonhard != -1) {
+        return (uint32_t)best_nonhard;
+    }
+
+    return (uint32_t)best_any;
+}
+
+void CACHE::llc_update_replacement_state(uint32_t cpu, uint32_t set, uint32_t way,
+                                         uint64_t full_addr, uint64_t ip,
+                                         uint64_t victim_addr, uint32_t type,
+                                         uint8_t hit)
+{
+    uint64_t key = block_key(full_addr);
+    resident_key[cpu][set][way] = key;
+
+    if (hit) {
+        bump_hcit(cpu, key, true, false);
+    } else {
+        bump_hcit(cpu, key, false, false);
+    }
+
+    if (!hit && victim_addr != 0) {
+        bump_hcit(cpu, block_key(victim_addr), false, true);
+    }
+
+    if (hit && type == WRITEBACK) return;
+    lru_update(set, way);
+}
+
+void CACHE::llc_replacement_final_stats()
+{
+}
