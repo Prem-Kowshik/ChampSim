@@ -2,11 +2,27 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <unordered_map>
+
+// ------------------------------------------------------------
+// HTC / HCIT-style LLC replacement for ChampSim
+//
+// Idea:
+// 1) Track a small set of "hard-to-cache" block regions in HCIT.
+// 2) Increase hardness on misses / evictions.
+// 3) Decrease hardness on hits.
+// 4) Prefer evicting non-hard lines first.
+// 5) Fall back to LRU if all candidates look hard.
+//
+// This version avoids NUM_SET / NUM_WAY, so it is safe for
+// ChampSim replacement files.
+// ------------------------------------------------------------
 
 #define HCIT_SETS 256
 #define HCIT_WAYS 4
+
 #define HCIT_COUNTER_MAX 3
-#define HCIT_HARD_THRESHOLD 2   
+#define HCIT_HARD_THRESHOLD 2
 
 struct HCITEntry {
     uint64_t tag;
@@ -16,41 +32,52 @@ struct HCITEntry {
 };
 
 static HCITEntry hcit[NUM_CPUS][HCIT_SETS][HCIT_WAYS];
-static uint64_t resident_key[NUM_CPUS][NUM_SET][NUM_WAY];
+
+// remember which block key currently lives in each (set, way)
+static std::unordered_map<uint64_t, uint64_t> resident_key[NUM_CPUS];
+
 static inline uint64_t block_key(uint64_t addr)
 {
-    return addr >> 6;
+    return addr >> 6; // 64B cache blocks
 }
+
+static inline uint64_t line_id(uint32_t set, uint32_t way)
+{
+    return (static_cast<uint64_t>(set) << 32) | static_cast<uint64_t>(way);
+}
+
 static inline uint32_t hcit_set_index(uint64_t key)
 {
-    return (uint32_t)((key ^ (key >> 8) ^ (key >> 16)) & (HCIT_SETS - 1));
+    return static_cast<uint32_t>((key ^ (key >> 8) ^ (key >> 16)) & (HCIT_SETS - 1));
 }
+
+static inline HCITEntry *hcit_find(int cpu, uint64_t key)
+{
+    uint32_t set = hcit_set_index(key);
+
+    for (int way = 0; way < HCIT_WAYS; way++) {
+        if (hcit[cpu][set][way].valid && hcit[cpu][set][way].tag == key)
+            return &hcit[cpu][set][way];
+    }
+
+    return nullptr;
+}
+
 static inline HCITEntry &hcit_lookup_or_alloc(int cpu, uint64_t key)
 {
     uint32_t set = hcit_set_index(key);
 
-    // Hit
-    for (int way = 0; way < HCIT_WAYS; way++) {
-        if (hcit[cpu][set][way].valid && hcit[cpu][set][way].tag == key) {
-            // age management
-            for (int k = 0; k < HCIT_WAYS; k++) {
-                if (hcit[cpu][set][k].valid) hcit[cpu][set][k].age++;
-            }
-            hcit[cpu][set][way].age = 0;
-            return hcit[cpu][set][way];
-        }
-    }
+    if (HCITEntry *found = hcit_find(cpu, key))
+        return *found;
 
-    // Miss in HCIT: choose invalid first, else oldest
     int victim = 0;
-    for (int way = 0; way < HCIT_WAYS; way++) {
+    for (int way = 1; way < HCIT_WAYS; way++) {
         if (!hcit[cpu][set][way].valid) {
             victim = way;
             break;
         }
-        if (hcit[cpu][set][way].age > hcit[cpu][set][victim].age) {
+        if (hcit[cpu][set][way].age > hcit[cpu][set][victim].age)
             victim = way;
-        }
     }
 
     HCITEntry &e = hcit[cpu][set][victim];
@@ -58,101 +85,137 @@ static inline HCITEntry &hcit_lookup_or_alloc(int cpu, uint64_t key)
     e.tag = key;
     e.counter = 0;
     e.age = 0;
-
     return e;
 }
 
 static inline bool is_hard(int cpu, uint64_t key)
 {
-    HCITEntry &e = hcit_lookup_or_alloc(cpu, key);
-    return e.counter >= HCIT_HARD_THRESHOLD;
+    HCITEntry *e = hcit_find(cpu, key);
+    return e && e->counter >= HCIT_HARD_THRESHOLD;
 }
 
-static inline void bump_hcit(int cpu, uint64_t key, bool hit, bool eviction)
+static inline uint8_t get_counter(int cpu, uint64_t key)
 {
-    if (key == 0) return;
+    HCITEntry *e = hcit_find(cpu, key);
+    return e ? e->counter : 0;
+}
+
+static inline void touch_hcit(int cpu, uint64_t key, bool hit, bool eviction)
+{
+    if (key == 0)
+        return;
 
     HCITEntry &e = hcit_lookup_or_alloc(cpu, key);
 
     if (hit) {
-        if (e.counter > 0) e.counter--;
+        if (e.counter > 0)
+            e.counter--;
     } else {
-        if (e.counter < HCIT_COUNTER_MAX) e.counter++;
+        if (e.counter < HCIT_COUNTER_MAX)
+            e.counter++;
     }
 
     if (eviction) {
-        if (e.counter < HCIT_COUNTER_MAX) e.counter++;
+        if (e.counter < HCIT_COUNTER_MAX)
+            e.counter++;
     }
 }
 
+// initialize replacement state
 void CACHE::llc_initialize_replacement()
 {
     memset(hcit, 0, sizeof(hcit));
-    memset(resident_key, 0, sizeof(resident_key));
+    for (int cpu = 0; cpu < NUM_CPUS; cpu++)
+        resident_key[cpu].clear();
 }
 
+// find replacement victim
 uint32_t CACHE::llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set,
                                 const BLOCK *current_set, uint64_t ip,
                                 uint64_t full_addr, uint32_t type)
 {
+    // 1) Fill invalid block first
     for (uint32_t way = 0; way < NUM_WAY; way++) {
-        if (!current_set[way].valid) {
+        if (!current_set[way].valid)
             return way;
-        }
     }
 
-    int best_nonhard = -1;
-    uint32_t best_nonhard_lru = 0;
+    // 2) Prefer evicting a non-hard line
+    int best_cold = -1;
+    uint32_t best_cold_lru = 0;
 
-    int best_any = 0;
-    uint32_t best_any_lru = current_set[0].lru;
+    // 3) If everything is hard, evict the least-protected hard line
+    int best_hard = -1;
+    uint8_t best_hard_counter = HCIT_COUNTER_MAX + 1;
+    uint32_t best_hard_lru = 0;
 
     for (uint32_t way = 0; way < NUM_WAY; way++) {
-        uint64_t key = resident_key[cpu][set][way];
+        uint64_t lid = line_id(set, way);
+        uint64_t key = 0;
+
+        auto it = resident_key[cpu].find(lid);
+        if (it != resident_key[cpu].end())
+            key = it->second;
+
         bool hard = is_hard(cpu, key);
+        uint8_t ctr = get_counter(cpu, key);
 
         if (!hard) {
-            if (best_nonhard == -1 || current_set[way].lru > best_nonhard_lru) {
-                best_nonhard = way;
-                best_nonhard_lru = current_set[way].lru;
+            if (best_cold == -1 || current_set[way].lru > best_cold_lru) {
+                best_cold = static_cast<int>(way);
+                best_cold_lru = current_set[way].lru;
+            }
+        } else {
+            if (best_hard == -1 ||
+                ctr < best_hard_counter ||
+                (ctr == best_hard_counter && current_set[way].lru > best_hard_lru)) {
+                best_hard = static_cast<int>(way);
+                best_hard_counter = ctr;
+                best_hard_lru = current_set[way].lru;
             }
         }
-
-        if (current_set[way].lru > best_any_lru) {
-            best_any = way;
-            best_any_lru = current_set[way].lru;
-        }
     }
 
-    if (best_nonhard != -1) {
-        return (uint32_t)best_nonhard;
-    }
+    if (best_cold != -1)
+        return static_cast<uint32_t>(best_cold);
 
-    return (uint32_t)best_any;
+    if (best_hard != -1)
+        return static_cast<uint32_t>(best_hard);
+
+    assert(0);
+    return 0;
 }
 
+// called on every cache hit and cache fill
 void CACHE::llc_update_replacement_state(uint32_t cpu, uint32_t set, uint32_t way,
                                          uint64_t full_addr, uint64_t ip,
                                          uint64_t victim_addr, uint32_t type,
                                          uint8_t hit)
 {
     uint64_t key = block_key(full_addr);
-    resident_key[cpu][set][way] = key;
+    resident_key[cpu][line_id(set, way)] = key;
 
+    // Adaptive admission / eviction behavior:
+    // - hits make a block look easier to cache
+    // - misses and evictions make a block look harder to cache
     if (hit) {
-        bump_hcit(cpu, key, true, false);
+        touch_hcit(cpu, key, true, false);
     } else {
-        bump_hcit(cpu, key, false, false);
+        touch_hcit(cpu, key, false, false);
     }
 
     if (!hit && victim_addr != 0) {
-        bump_hcit(cpu, block_key(victim_addr), false, true);
+        touch_hcit(cpu, block_key(victim_addr), false, true);
     }
 
-    if (hit && type == WRITEBACK) return;
+    // keep normal LRU metadata updated
+    if (hit && type == WRITEBACK)
+        return;
+
     lru_update(set, way);
 }
 
 void CACHE::llc_replacement_final_stats()
 {
+    // optional: add debug prints if you want
 }

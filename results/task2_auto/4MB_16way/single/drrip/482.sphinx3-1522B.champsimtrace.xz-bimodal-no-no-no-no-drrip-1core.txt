@@ -1,0 +1,202 @@
+
+*** ChampSim Multicore Out-of-Order Simulator ***
+
+Warmup Instructions: 1000000
+Simulation Instructions: 10000000
+Number of CPUs: 1
+LLC sets: 4096
+LLC ways: 16
+Off-chip DRAM Size: 4096 MB Channels: 1 Width: 64-bit Data Rate: 3200 MT/s
+
+CPU 0 runs /mnt/c/Users/dadir/Downloads/Lab-Final/ChampSim-master/dpc3_traces/482.sphinx3-1522B.champsimtrace.xz
+CPU 0 Bimodal branch predictor
+Initialize DRRIP state
+Assign rand_sets[0]: 454  LLC: 4096
+rand_sets[0]: 454
+Assign rand_sets[1]: 1662  LLC: 4096
+rand_sets[1]: 1662
+Assign rand_sets[2]: 1921  LLC: 4096
+rand_sets[2]: 1921
+Assign rand_sets[3]: 1131  LLC: 4096
+rand_sets[3]: 1131
+Assign rand_sets[4]: 2379  LLC: 4096
+rand_sets[4]: 2379
+Assign rand_sets[5]: 1531  LLC: 4096
+rand_sets[5]: 1531
+Assign rand_sets[6]: 2530  LLC: 4096
+rand_sets[6]: 2530
+Assign rand_sets[7]: 3323  LLC: 4096
+rand_sets[7]: 3323
+Assign rand_sets[8]: 3924  LLC: 4096
+rand_sets[8]: 3924
+Assign rand_sets[9]: 4086  LLC: 4096
+rand_sets[9]: 4086
+Assign rand_sets[10]: 2749  LLC: 4096
+rand_sets[10]: 2749
+Assign rand_sets[11]: 479  LLC: 4096
+rand_sets[11]: 479
+Assign rand_sets[12]: 892  LLC: 4096
+rand_sets[12]: 892
+Assign rand_sets[13]: 3868  LLC: 4096
+rand_sets[13]: 3868
+Assign rand_sets[14]: 3553  LLC: 4096
+rand_sets[14]: 3553
+Assign rand_sets[15]: 1159  LLC: 4096
+rand_sets[15]: 1159
+Assign rand_sets[16]: 513  LLC: 4096
+rand_sets[16]: 513
+Assign rand_sets[17]: 703  LLC: 4096
+rand_sets[17]: 703
+Assign rand_sets[18]: 561  LLC: 4096
+rand_sets[18]: 561
+Assign rand_sets[19]: 990  LLC: 4096
+rand_sets[19]: 990
+Assign rand_sets[20]: 2390  LLC: 4096
+rand_sets[20]: 2390
+Assign rand_sets[21]: 882  LLC: 4096
+rand_sets[21]: 882
+Assign rand_sets[22]: 15  LLC: 4096
+rand_sets[22]: 15
+Assign rand_sets[23]: 2119  LLC: 4096
+rand_sets[23]: 2119
+Assign rand_sets[24]: 3175  LLC: 4096
+rand_sets[24]: 3175
+Assign rand_sets[25]: 1382  LLC: 4096
+rand_sets[25]: 1382
+Assign rand_sets[26]: 647  LLC: 4096
+rand_sets[26]: 647
+Assign rand_sets[27]: 857  LLC: 4096
+rand_sets[27]: 857
+Assign rand_sets[28]: 3498  LLC: 4096
+rand_sets[28]: 3498
+Assign rand_sets[29]: 1160  LLC: 4096
+rand_sets[29]: 1160
+Assign rand_sets[30]: 1852  LLC: 4096
+rand_sets[30]: 1852
+Assign rand_sets[31]: 3929  LLC: 4096
+rand_sets[31]: 3929
+Assign rand_sets[32]: 3818  LLC: 4096
+rand_sets[32]: 3818
+Assign rand_sets[33]: 1622  LLC: 4096
+rand_sets[33]: 1622
+Assign rand_sets[34]: 275  LLC: 4096
+rand_sets[34]: 275
+Assign rand_sets[35]: 2683  LLC: 4096
+rand_sets[35]: 2683
+Assign rand_sets[36]: 466  LLC: 4096
+rand_sets[36]: 466
+Assign rand_sets[37]: 3461  LLC: 4096
+rand_sets[37]: 3461
+Assign rand_sets[38]: 2465  LLC: 4096
+rand_sets[38]: 2465
+Assign rand_sets[39]: 2520  LLC: 4096
+rand_sets[39]: 2520
+Assign rand_sets[40]: 1340  LLC: 4096
+rand_sets[40]: 1340
+Assign rand_sets[41]: 2900  LLC: 4096
+rand_sets[41]: 2900
+Assign rand_sets[42]: 3413  LLC: 4096
+rand_sets[42]: 3413
+Assign rand_sets[43]: 47  LLC: 4096
+rand_sets[43]: 47
+Assign rand_sets[44]: 2871  LLC: 4096
+rand_sets[44]: 2871
+Assign rand_sets[45]: 2734  LLC: 4096
+rand_sets[45]: 2734
+Assign rand_sets[46]: 3685  LLC: 4096
+rand_sets[46]: 3685
+Assign rand_sets[47]: 1115  LLC: 4096
+rand_sets[47]: 1115
+Assign rand_sets[48]: 986  LLC: 4096
+rand_sets[48]: 986
+Assign rand_sets[49]: 258  LLC: 4096
+rand_sets[49]: 258
+Assign rand_sets[50]: 2681  LLC: 4096
+rand_sets[50]: 2681
+Assign rand_sets[51]: 920  LLC: 4096
+rand_sets[51]: 920
+Assign rand_sets[52]: 2252  LLC: 4096
+rand_sets[52]: 2252
+Assign rand_sets[53]: 227  LLC: 4096
+rand_sets[53]: 227
+Assign rand_sets[54]: 3866  LLC: 4096
+rand_sets[54]: 3866
+Assign rand_sets[55]: 2934  LLC: 4096
+rand_sets[55]: 2934
+Assign rand_sets[56]: 1422  LLC: 4096
+rand_sets[56]: 1422
+Assign rand_sets[57]: 2655  LLC: 4096
+rand_sets[57]: 2655
+Assign rand_sets[58]: 2265  LLC: 4096
+rand_sets[58]: 2265
+Assign rand_sets[59]: 1945  LLC: 4096
+rand_sets[59]: 1945
+Assign rand_sets[60]: 2191  LLC: 4096
+rand_sets[60]: 2191
+Assign rand_sets[61]: 1311  LLC: 4096
+rand_sets[61]: 1311
+Assign rand_sets[62]: 2367  LLC: 4096
+rand_sets[62]: 2367
+Assign rand_sets[63]: 3894  LLC: 4096
+rand_sets[63]: 3894
+
+Warmup complete CPU 0 instructions: 1000002 cycles: 351910 (Simulation time: 0 hr 0 min 2 sec) 
+
+Heartbeat CPU 0 instructions: 10000003 cycles: 10410479 heartbeat IPC: 0.960571 cumulative IPC: 0.89476 (Simulation time: 0 hr 0 min 20 sec) 
+Finished CPU 0 instructions: 10000000 cycles: 10931780 cumulative IPC: 0.914764 (Simulation time: 0 hr 0 min 22 sec) 
+
+ChampSim completed all CPUs
+
+Region of Interest Statistics
+
+CPU 0 cumulative IPC: 0.914764 instructions: 10000000 cycles: 10931780
+L1D TOTAL     ACCESS:    1541212  HIT:    1399910  MISS:     141302
+L1D LOAD      ACCESS:    1420831  HIT:    1290345  MISS:     130486
+L1D RFO       ACCESS:     120381  HIT:     109565  MISS:      10816
+L1D PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+L1D WRITEBACK ACCESS:          0  HIT:          0  MISS:          0
+L1D PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:          0  USELESS:          0
+L1D AVERAGE MISS LATENCY: 84.2193 cycles
+L1I TOTAL     ACCESS:    1906255  HIT:    1906158  MISS:         97
+L1I LOAD      ACCESS:    1906255  HIT:    1906158  MISS:         97
+L1I RFO       ACCESS:          0  HIT:          0  MISS:          0
+L1I PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+L1I WRITEBACK ACCESS:          0  HIT:          0  MISS:          0
+L1I PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:          0  USELESS:          0
+L1I AVERAGE MISS LATENCY: 208.175 cycles
+L2C TOTAL     ACCESS:     153389  HIT:      31807  MISS:     121582
+L2C LOAD      ACCESS:     130583  HIT:      19219  MISS:     111364
+L2C RFO       ACCESS:      10816  HIT:        629  MISS:      10187
+L2C PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+L2C WRITEBACK ACCESS:      11990  HIT:      11959  MISS:         31
+L2C PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:          0  USELESS:          0
+L2C AVERAGE MISS LATENCY: 79.7828 cycles
+LLC TOTAL     ACCESS:     130546  HIT:      75682  MISS:      54864
+LLC LOAD      ACCESS:     111364  HIT:      59216  MISS:      52148
+LLC RFO       ACCESS:      10187  HIT:       7500  MISS:       2687
+LLC PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+LLC WRITEBACK ACCESS:       8995  HIT:       8966  MISS:         29
+LLC PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:          0  USELESS:          0
+LLC AVERAGE MISS LATENCY: 108.685 cycles
+Major fault: 0 Minor fault: 1947
+
+DRAM Statistics
+ CHANNEL 0
+ RQ ROW_BUFFER_HIT:      41959  ROW_BUFFER_MISS:      12876
+ DBUS_CONGESTED:       2915
+ WQ ROW_BUFFER_HIT:        154  ROW_BUFFER_MISS:        347  FULL:          0
+
+ AVG_CONGESTED_CYCLE: 4
+
+CPU 0 Branch Prediction Accuracy: 96.2693% MPKI: 3.4792 Average ROB Occupancy at Mispredict: 142.2
+
+Branch types
+NOT_BRANCH: 9067147 90.6715%
+BRANCH_DIRECT_JUMP: 17457 0.17457%
+BRANCH_INDIRECT: 0 0%
+BRANCH_CONDITIONAL: 888537 8.88537%
+BRANCH_DIRECT_CALL: 13299 0.13299%
+BRANCH_INDIRECT_CALL: 0 0%
+BRANCH_RETURN: 13298 0.13298%
+BRANCH_OTHER: 0 0%
+

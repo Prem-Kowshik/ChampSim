@@ -32,7 +32,7 @@ MANIFEST="$OUT_ROOT/$EXPERIMENT_TAG/manifest.csv"
 echo "policy,trace,binary,log_file" > "$MANIFEST"
 
 for policy in "${POLICIES[@]}"; do
-  binary="$CHAMPSIM_ROOT/bin/${BRANCH}-no-no-no-no-${policy}-1core"
+  binary="${BRANCH}-no-no-no-no-${policy}-1core"
   if [[ ! -x "$binary" ]]; then
     echo "WARN: missing binary: $binary" >&2
     continue
