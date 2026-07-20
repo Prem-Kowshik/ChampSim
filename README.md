@@ -141,7 +141,3 @@ Other modes:
 | `run_task1_multicore.sh` | Task 1 multicore automation |
 | `run_task2_auto.sh` | Task 2 single-core automation |
 | `run_task2_multicore_direct.sh` | Task 2 multicore direct-run script |
-| `make_task1_graphs.py` | Task 1 graph generation |
-| `make_task2_graphs.py` | Task 2 graph generation |
-| `make_task2_multicore_graphs.py` | Task 2 multicore graph generation |
-| `final_lab_report.docx` | Final written report |
