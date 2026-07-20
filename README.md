@@ -49,7 +49,6 @@ Files:
 - `run_task1_singlecore.sh`
 - `run_task1_multicore.sh`
 - `run_task2_auto.sh`
-- `run_task2_multicore.sh`
 - `run_task2_multicore_direct.sh`
 
 What these scripts do:
@@ -59,18 +58,6 @@ What these scripts do:
 - Run Task 2 single-core and multicore sweeps.
 - Save logs in structured folders for easier analysis.
 
-### 5) Graph generation
-Files:
-- `make_task1_graphs.py`
-- `make_task1_final_graphs.py`
-- `make_task2_graphs.py`
-- `make_task2_final_graphs.py`
-- `make_task2_multicore_graphs.py`
-
-What these scripts do:
-- Build Task 1 and Task 2 plots from the collected logs/tables.
-- Use consistent scaling and readable styling.
-- Export graphs and supporting tables into the `graphs/` directory.
 
 ### 6) Report and documentation
 Files:
@@ -153,7 +140,6 @@ Other modes:
 | `run_task1_singlecore.sh` | Task 1 single-core automation |
 | `run_task1_multicore.sh` | Task 1 multicore automation |
 | `run_task2_auto.sh` | Task 2 single-core automation |
-| `run_task2_multicore.sh` | Task 2 multicore wrapper-based script |
 | `run_task2_multicore_direct.sh` | Task 2 multicore direct-run script |
 | `make_task1_graphs.py` | Task 1 graph generation |
 | `make_task2_graphs.py` | Task 2 graph generation |
